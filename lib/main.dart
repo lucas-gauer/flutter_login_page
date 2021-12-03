@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_login_page/main.mocks.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 
+import 'package:flutter_login_page/auth_service.dart';
+
+const rightUsername = 'usernamecriativo';
+const rightPassword = 'senh@criativa123';
+
+// ! this should be managed differently
+final authService = MockAuthService();
+
+@GenerateMocks([AuthService])
 void main() {
+  //* mocks
+  
+  when( authService.login(any, any) ).thenReturn(false);
+
+  when(
+    authService.login(rightUsername, rightPassword)
+  ).thenReturn(true);
+
   runApp(const MyApp());
 }
 
@@ -57,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: const InputDecoration(
                         border: const OutlineInputBorder(),
                         labelText: 'Usuário',
-                        hintText: 'usernamecriativo'
+                        hintText: rightUsername,
                       ),
                       onSaved: (user) {
                         if (user != null)
@@ -76,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: const InputDecoration(
                         border: const OutlineInputBorder(),
                         labelText: 'Senha',
-                        hintText: 'senh@criativa123',
+                        hintText: rightPassword,
                       ),
                       onSaved: (password) {
                         if (password != null)
@@ -126,6 +146,9 @@ class _LoginPageState extends State<LoginPage> {
 
     form.save();
 
-    // TODO finish login
+    bool success = authService.login(user, password);
+    print(success);
+
+    // TODO show if successful
   }
 }
