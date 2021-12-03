@@ -147,8 +147,23 @@ class _LoginPageState extends State<LoginPage> {
     form.save();
 
     bool success = authService.login(user, password);
-    print(success);
-
-    // TODO show if successful
+    
+    String message;
+    Color color;
+    if (success) {
+      message = 'Login realizado';
+      color = Colors.green;
+    } else {
+      message = 'Credenciais inválidas';
+      color = Colors.red;
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
   }
 }
