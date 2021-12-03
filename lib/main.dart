@@ -27,6 +27,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final formKey = GlobalKey<FormState>();
+
+  String user = '';
+  String password = '';
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -39,20 +44,25 @@ class _LoginPageState extends State<LoginPage> {
           width: 512,
           child: Card(
             child: Form(
+              key: formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
 
                   //* username
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: TextFormField(
+                      validator: fieldValidator,
                       style: textTheme.headline6,
                       decoration: const InputDecoration(
                         border: const OutlineInputBorder(),
                         labelText: 'Usuário',
                         hintText: 'usernamecriativo'
                       ),
+                      onSaved: (user) {
+                        if (user != null)
+                          this.user = user;
+                      },
                     ),
                   ),
 
@@ -61,12 +71,17 @@ class _LoginPageState extends State<LoginPage> {
                     padding: const EdgeInsets.all(8.0),
                     child: TextFormField(
                       obscureText: true,
+                      validator: fieldValidator,
                       style: textTheme.headline6,
                       decoration: const InputDecoration(
                         border: const OutlineInputBorder(),
                         labelText: 'Senha',
                         hintText: 'senh@criativa123',
                       ),
+                      onSaved: (password) {
+                        if (password != null)
+                          this.password = password;
+                      },
                     ),
                   ),
 
@@ -76,9 +91,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: SizedBox(
                         width: 128,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO
-                          },
+                          onPressed: onLogin,
                           child: Text(
                             'Login',
                             style: textTheme.headline6!.copyWith(
@@ -97,5 +110,22 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  String? fieldValidator(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Preencha este campo!';
+    }
+  }
+
+  void onLogin() {
+    final form = formKey.currentState!;
+
+    bool isValid = form.validate();
+    if (!isValid) return;
+
+    form.save();
+
+    // TODO finish login
   }
 }
