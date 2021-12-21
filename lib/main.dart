@@ -2,26 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_login_page/main.mocks.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:provider/provider.dart';
 
 import 'package:flutter_login_page/auth_service.dart';
+
+import 'login_controller.dart';
 
 const rightUsername = 'usernamecriativo';
 const rightPassword = 'senh@criativa123';
 
-// ! this should be managed differently
-final authService = MockAuthService();
-
 @GenerateMocks([AuthService])
 void main() {
+  final authService = MockAuthService();
+
   //* mocks
-  
+
   when( authService.login(any, any) ).thenReturn(false);
 
   when(
     authService.login(rightUsername, rightPassword)
   ).thenReturn(true);
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<AuthService>.value(value: authService),
+        // add more services here
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -47,83 +57,78 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final formKey = GlobalKey<FormState>();
+  late final LoginController controller;
 
-  String user = '';
-  String password = '';
+  @override
+  void initState() {
+    super.initState();
+    controller = LoginController(
+      serviceLocator: context.read,
+    );
+
+    controller.addListener(stateListener);
+  }
+
+  void stateListener() {
+    switch (controller.state) {
+      case LoginPageState.input:
+        return;
+      case LoginPageState.success:
+        showMessage('Login realizado', Colors.green);
+        break;
+      case LoginPageState.fail:
+        showMessage('Credenciais inválidas', Colors.red);
+        break;
+    }
+  }
+
+  void showMessage(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    return ChangeNotifierProvider<LoginController>.value(
+      value: controller,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Login'),),
+        body: Center(
+          child: SizedBox(
+            height: 256,
+            width: 512,
+            child: Card(
+              child: Form(
+                key: controller.formKey,
+                child: Column(
+                  children: [
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login'),),
-      body: Center(
-        child: SizedBox(
-          height: 256,
-          width: 512,
-          child: Card(
-            child: Form(
-              key: formKey,
-              child: Column(
-                children: [
-
-                  //* username
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextFormField(
-                      validator: fieldValidator,
-                      style: textTheme.headline6,
-                      decoration: const InputDecoration(
-                        border: const OutlineInputBorder(),
-                        labelText: 'Usuário',
-                        hintText: rightUsername,
-                      ),
-                      onSaved: (user) {
-                        if (user != null)
-                          this.user = user;
-                      },
+                    //* username
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: UsernameFormField(),
                     ),
-                  ),
 
-                  //* password
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextFormField(
-                      obscureText: true,
-                      validator: fieldValidator,
-                      style: textTheme.headline6,
-                      decoration: const InputDecoration(
-                        border: const OutlineInputBorder(),
-                        labelText: 'Senha',
-                        hintText: rightPassword,
-                      ),
-                      onSaved: (password) {
-                        if (password != null)
-                          this.password = password;
-                      },
+                    //* password
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: PasswordFormField(),
                     ),
-                  ),
 
-                  //* button
-                  Expanded(
-                    child: Center(
-                      child: SizedBox(
-                        width: 128,
-                        child: ElevatedButton(
-                          onPressed: onLogin,
-                          child: Text(
-                            'Login',
-                            style: textTheme.headline6!.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                    //* button
+                    Expanded(
+                      child: Center(
+                        child: LoginButton(),
                       ),
                     ),
-                  ),
 
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -131,38 +136,73 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+}
 
-  String? fieldValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Preencha este campo!';
-    }
+class UsernameFormField extends StatelessWidget {
+  const UsernameFormField({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<LoginController>();
+
+    return TextFormField(
+      validator: controller.fieldValidator,
+      style: Theme.of(context).textTheme.headline6,
+      decoration: const InputDecoration(
+        border: const OutlineInputBorder(),
+        labelText: 'Usuário',
+        hintText: rightUsername,
+      ),
+      onSaved: (user) {
+        if (user != null)
+          controller.data.username = user;
+      },
+    );
   }
+}
 
-  void onLogin() {
-    final form = formKey.currentState!;
+class PasswordFormField extends StatelessWidget {
+  const PasswordFormField({Key? key}) : super(key: key);
 
-    bool isValid = form.validate();
-    if (!isValid) return;
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<LoginController>();
 
-    form.save();
+    return TextFormField(
+      obscureText: true,
+      validator: controller.fieldValidator,
+      style: Theme.of(context).textTheme.headline6,
+      decoration: const InputDecoration(
+        border: const OutlineInputBorder(),
+        labelText: 'Senha',
+        hintText: rightPassword,
+      ),
+      onSaved: (password) {
+        if (password != null)
+          controller.data.password = password;
+      },
+    );
+  }
+}
 
-    bool success = authService.login(user, password);
-    
-    String message;
-    Color color;
-    if (success) {
-      message = 'Login realizado';
-      color = Colors.green;
-    } else {
-      message = 'Credenciais inválidas';
-      color = Colors.red;
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
+class LoginButton extends StatelessWidget {
+  const LoginButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<LoginController>();
+    final textTheme = Theme.of(context).textTheme;
+
+    return SizedBox(
+      width: 128,
+      child: ElevatedButton(
+        onPressed: controller.onLogin,
+        child: Text(
+          'Login',
+          style: textTheme.headline6!.copyWith(
+            color: Colors.white,
+          ),
+        ),
       )
     );
   }
